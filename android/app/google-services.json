@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "344948492389",
+    "project_id": "economyapp-4339e",
+    "storage_bucket": "economyapp-4339e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344948492389:android:606dc26e70faf39208de8c",
+        "android_client_info": {
+          "package_name": "com.example.economy_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvBRVPm1gIHfo-h5XQ4aY9AqgddevnWls"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
