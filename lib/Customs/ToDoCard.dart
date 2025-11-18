@@ -8,7 +8,6 @@ class ToDoCard extends StatelessWidget {
       this.iconData,
       this.iconColor,
       this.time,
-      this.check,
       this.iconBgColor,
       this.onChange,
       this.index});
@@ -17,7 +16,6 @@ class ToDoCard extends StatelessWidget {
   final IconData? iconData;
   final Color? iconColor;
   final String? time;
-  final bool? check;
   final Color? iconBgColor;
   final Function? onChange;
   final int? index;
@@ -26,26 +24,17 @@ class ToDoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: MediaQuery.of(context).size.width,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
           Theme(
-            child: Transform.scale(
-              scale: 1.5,
-              child: Checkbox(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                activeColor: Color(0xff6cf8a9),
-                checkColor: Color(0xff0e3e26),
-                value: check,
-                onChanged: (bool? value) {
-                  onChange!(index);
-                },
-              ),
-            ),
             data: ThemeData(
               primarySwatch: Colors.blue,
               unselectedWidgetColor: Color(0xff5e616a),
+            ),
+            child: Transform.scale(
+              scale: 1.5,
+              
             ),
           ),
           Expanded(

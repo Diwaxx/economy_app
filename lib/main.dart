@@ -4,11 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:intl/date_symbol_data_file.dart';
 import 'package:economy_app/Services/Auth_Service.dart';
-import 'package:economy_app/pages/AddSpending.dart';
+import 'package:economy_app/pages/AddTransaction.dart';
 import 'package:economy_app/pages/SingInPage.dart';
 import 'package:economy_app/pages/SingUpPage.dart';
-import 'package:economy_app/pages/WidgetDropdown.dart';
-
+import 'package:month_year_picker/month_year_picker.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -27,6 +27,20 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Firebase Init Demo',
+      localizationsDelegates: const [
+        
+        MonthYearPickerLocalizations.delegate, 
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+// Добавьте эту строку
+      ],
+      supportedLocales: const [
+        Locale('en'), // Английский
+        Locale('ru'), // Русский
+      ],
+      locale: const Locale('ru'), 
+
       home: FutureBuilder(
         future: _initialization,
         builder: (context, snapshot) {
@@ -68,11 +82,11 @@ class _MyHomePageState extends State<MyHomePage> {
     checkLogin();
   }
 
-  Widget currPage = HomePage();
-  AuthClass authClass = AuthClass();
+  Widget currPage = SingInPage();
+  AuthService authService  = AuthService();
 
   void checkLogin() async {
-    String token = (await authClass.getToken());
+    String? token = (await authService.getToken());
     if (token != "") {
       setState(() {
         currPage = HomePage();

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:economy_app/Customs/type_select.dart';
 
 class ViewData extends StatefulWidget {
   const ViewData({super.key, this.document, this.id});
@@ -52,15 +53,15 @@ class _ViewDataState extends State<ViewData> {
           height: MediaQuery.of(context).size.height,
           width: MediaQuery.of(context).size.width,
           decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [Color(0xff1d1e26), Color(0xff252041)])),
+            gradient: LinearGradient(
+              colors: [Color(0xff1d1e26), Color(0xff252041)],
+            ),
+          ),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(
-                  height: 30,
-                ),
+                const SizedBox(height: 30),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -80,12 +81,12 @@ class _ViewDataState extends State<ViewData> {
                           onPressed: () {
                             setState(() {
                               FirebaseFirestore.instance
-                                  .collection("AddQuest")
+                                  .collection("AddTransaction")
                                   .doc(widget.id)
                                   .delete()
                                   .then((value) {
-                                Navigator.pop(context);
-                              });
+                                    Navigator.pop(context);
+                                  });
                             });
                           },
                           icon: const Icon(
@@ -99,75 +100,64 @@ class _ViewDataState extends State<ViewData> {
                   ],
                 ),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 25, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 25,
+                    vertical: 5,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       //title(""),
-
                       label("Название"),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       enterTitle(55, 1, "Введите название", _titleController),
-                      const SizedBox(
-                        height: 15,
-                      ),
+                      const SizedBox(height: 15),
                       label("Тип"),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
-                          typeSelect("Важное", 0xff2664fa),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          typeSelect("Запланнированное", 0xff2bc8d9),
+                          typeSelect("Доход", 0xff2664fa),
+                          const SizedBox(width: 10),
+                          typeSelect("Расход", 0xff2bc8d9),
                         ],
                       ),
-                      const SizedBox(
-                        height: 15,
-                      ),
+                      const SizedBox(height: 15),
                       label("Описание"),
-                      const SizedBox(
-                        height: 15,
+                      const SizedBox(height: 15),
+                      enterTitle(
+                        150,
+                        null,
+                        "Введите описание",
+                        _desctiptionController,
                       ),
-                      enterTitle(150, null, "Введите описание",
-                          _desctiptionController),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       label("Категория"),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       Wrap(
-                        runSpacing: 5,
                         children: [
-                          categorySelect("Покупки", 0xffff6d6e),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          categorySelect("Встреча", 0xffff0000),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          categorySelect("Обучение", 0xffb74093),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          categorySelect("Тренировка", 0xfff29732),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          categorySelect("Прочее", 0xff9056e5),
-                          const SizedBox(
-                            width: 10,
+                          CompactCategoryDropdown(
+                            categories: const [
+                              'Еда',
+                              'Транспорт',
+                              'Развлечения',
+                              'Одежда',
+                              'Здоровье',
+                              'Образование',
+                              'Путешествия',
+                              'Дом и быт',
+                              'Техника',
+                              'Другое',
+                            ],
+                            value: category!.isEmpty ? null : category,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                category = newValue ?? "";
+                              });
+                            },
                           ),
                         ],
                       ),
+                      const SizedBox(height: 15),
                       label("Время"),
                       const SizedBox(height: 10),
                       InkWell(
@@ -184,18 +174,18 @@ class _ViewDataState extends State<ViewData> {
                           child: Text(
                             "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}",
                             style: const TextStyle(
-                                color: Colors.grey, fontSize: 17),
+                              color: Colors.grey,
+                              fontSize: 17,
+                            ),
                           ),
                         ),
                       ),
 
-                      const SizedBox(
-                        height: 30,
-                      ),
+                      const SizedBox(height: 30),
                       colorButton(),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -225,38 +215,42 @@ class _ViewDataState extends State<ViewData> {
   Widget colorButton() {
     return InkWell(
       onTap: () {
-        FirebaseFirestore.instance
-            .collection("AddQuest")
-            .doc(widget.id)
-            .update({
-          "title": _titleController.text,
-          "category": category,
-          "description": _desctiptionController.text,
-          "taskType": type,
-          "time": Timestamp.fromDate(time.subtract(const Duration(hours: 3))),
-          // сохраняем как Timestamp
-        });
+        FirebaseFirestore.instance.collection("AddTransaction").doc(widget.id).update(
+          {
+            "title": _titleController.text,
+            "category": category,
+            "description": _desctiptionController.text,
+            "taskType": type,
+            "time": Timestamp.fromDate(time.subtract(const Duration(hours: 3))),
+            // сохраняем как Timestamp
+          },
+        );
         Navigator.pop(context);
       },
       child: Container(
-          height: 50,
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(colors: [
-                Color.fromARGB(255, 108, 142, 253),
-                Color(0xffff9068),
-                Color.fromARGB(255, 108, 176, 253)
-              ])),
-          child: const Center(
-            child: Text(
-              "Изменить",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
+        height: 50,
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [
+              Color.fromARGB(255, 108, 142, 253),
+              Color(0xffff9068),
+              Color.fromARGB(255, 108, 176, 253),
+            ],
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            "Изменить",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-          )),
+          ),
+        ),
+      ),
     );
   }
 
@@ -264,7 +258,10 @@ class _ViewDataState extends State<ViewData> {
     return Text(
       label,
       style: const TextStyle(
-          color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: 17,
+      ),
     );
   }
 
@@ -277,15 +274,14 @@ class _ViewDataState extends State<ViewData> {
       },
       child: Chip(
         backgroundColor: type == label ? Colors.white54 : Color(color),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         label: Text(
           label,
           style: TextStyle(
-              color: type == label ? Colors.black : Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
+            color: type == label ? Colors.black : Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
       ),
@@ -301,23 +297,26 @@ class _ViewDataState extends State<ViewData> {
       },
       child: Chip(
         backgroundColor: category == label ? Colors.white : Color(color),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         label: Text(
           label,
           style: TextStyle(
-              color: category == label ? Colors.black : Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
+            color: category == label ? Colors.black : Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
       ),
     );
   }
 
-  Widget enterTitle(double height, int? maxlines, String hintText,
-      TextEditingController? controller) {
+  Widget enterTitle(
+    double height,
+    int? maxlines,
+    String hintText,
+    TextEditingController? controller,
+  ) {
     return Container(
       height: height,
       width: MediaQuery.of(context).size.width,
@@ -330,10 +329,11 @@ class _ViewDataState extends State<ViewData> {
         maxLines: maxlines,
         style: const TextStyle(color: Colors.grey, fontSize: 17),
         decoration: InputDecoration(
-            border: InputBorder.none,
-            hintText: hintText,
-            hintStyle: const TextStyle(color: Colors.grey, fontSize: 17),
-            contentPadding: const EdgeInsets.only(left: 20, right: 20, top: 5)),
+          border: InputBorder.none,
+          hintText: hintText,
+          hintStyle: const TextStyle(color: Colors.grey, fontSize: 17),
+          contentPadding: const EdgeInsets.only(left: 20, right: 20, top: 5),
+        ),
       ),
     );
   }
@@ -342,10 +342,40 @@ class _ViewDataState extends State<ViewData> {
     return Text(
       title,
       style: const TextStyle(
-          fontSize: 33,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2),
+        fontSize: 33,
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 2,
+      ),
+    );
+  }
+}
+
+class CompactCategoryDropdown extends StatelessWidget {
+  final List<String> categories;
+  final ValueChanged<String?>? onChanged;
+  final String? value;
+
+  const CompactCategoryDropdown({
+    super.key,
+    this.categories = const ['Еда', 'Транспорт', 'Развлечения', 'Другое'],
+    this.onChanged,
+    this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownMenu<String>(
+      textStyle: TextStyle(color: Colors.white),
+      width: 180, // Более компактная ширина
+      initialSelection: value,
+      hintText: 'Категория',
+      onSelected: onChanged,
+      dropdownMenuEntries: categories
+          .map<DropdownMenuEntry<String>>(
+            (value) => DropdownMenuEntry(value: value, label: value),
+          )
+          .toList(),
     );
   }
 }

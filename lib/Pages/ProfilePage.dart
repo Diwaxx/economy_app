@@ -9,7 +9,7 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-AuthClass authClass = AuthClass();
+AuthService authClass = AuthService();
 
 class _ProfilePageState extends State<ProfilePage> {
   @override
@@ -25,7 +25,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 color: Colors.white,
               ),
               onPressed: () async {
-                await authClass.logout(context);
+                await authClass.signOut(context);
 
                 if (context.mounted) {
                   Navigator.pushAndRemoveUntil(

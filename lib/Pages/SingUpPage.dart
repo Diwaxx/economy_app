@@ -19,7 +19,7 @@ class _SignUpPageState extends State<SignUpPage> {
   firebase_auth.FirebaseAuth firebaseAuth = firebase_auth.FirebaseAuth.instance;
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
-  AuthClass authClass = AuthClass();
+  AuthService authClass = AuthService();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,15 +40,15 @@ class _SignUpPageState extends State<SignUpPage> {
               height: 20,
             ),
             buttonItem("assets/google.svg", "Войти через гугл", 25, () async {
-              await authClass.googleSignIn(context);
+              await authClass.signInWithGoogle(context);
             }),
             SizedBox(
               height: 15,
             ),
-            buttonItem("assets/phone.svg", "Войти через телефон", 25, () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (builder) => PhoneAuthPage()));
-            }),
+            // buttonItem("assets/phone.svg", "Войти через телефон", 25, () {
+            //   Navigator.push(context,
+            //       MaterialPageRoute(builder: (builder) => PhoneAuthPage()));
+            // }),
             SizedBox(
               height: 15,
             ),

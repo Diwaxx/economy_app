@@ -1,7 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:economy_app/Customs/type_select.dart';
 import 'package:economy_app/Pages/HomePage.dart';
+import 'package:economy_app/Services/Firestore_Service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:economy_app/Services/Firestore_Service.dart';
 
 class CompactCategoryDropdown extends StatelessWidget {
   final List<String> categories;
@@ -18,8 +23,8 @@ class CompactCategoryDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownMenu<String>(
-      textStyle: TextStyle( color:Colors.white ),
-      width: 180, // Более компактная ширина
+      textStyle: TextStyle(color: Colors.white),
+      width: 180,
       initialSelection: value,
       hintText: 'Категория',
       onSelected: onChanged,
@@ -31,7 +36,6 @@ class CompactCategoryDropdown extends StatelessWidget {
     );
   }
 }
-const List<String> categoryList = <String>['One', 'Two', 'Three', 'Four'];
 
 class AddToDoPage extends StatefulWidget {
   const AddToDoPage({super.key});
@@ -42,10 +46,12 @@ class AddToDoPage extends StatefulWidget {
 
 class _AddToDoPageState extends State<AddToDoPage> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _desctiptionController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
   String type = "";
   String category = "";
   TimeOfDay? selectedTime;
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -65,9 +71,7 @@ class _AddToDoPageState extends State<AddToDoPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(
-                  height: 30,
-                ),
+                const SizedBox(height: 30),
                 IconButton(
                   onPressed: () {
                     Navigator.push(
@@ -88,76 +92,57 @@ class _AddToDoPageState extends State<AddToDoPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       title("Добавить трату"),
-                      const SizedBox(
-                        height: 20,
-                      ),
+                      const SizedBox(height: 20),
                       label("Сумма траты"),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      enterTitle(55, 1, "Введите название", _titleController),
-                      const SizedBox(
-                        height: 15,
-                      ),
+                      const SizedBox(height: 10),
+                      enterTitle(55, 1, "Введите сумму", _titleController),
+                      const SizedBox(height: 15),
                       label("Тип"),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           typeSelect("Расход", 0xff2664fa),
-                          const SizedBox(
-                            width: 10,
-                          ),
+                          const SizedBox(width: 10),
                           typeSelect("Доход", 0xff2bc8d9),
                         ],
                       ),
-                      const SizedBox(
-                        height: 15,
-                      ),
+                      const SizedBox(height: 15),
                       label("Описание"),
-                      const SizedBox(
-                        height: 15,
-                      ),
+                      const SizedBox(height: 15),
                       enterTitle(150, null, "Введите описание",
-                          _desctiptionController),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                          _descriptionController),
+                      const SizedBox(height: 10),
                       label("Категория"),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       Wrap(
                         children: [
-    CompactCategoryDropdown(
-      categories: const [
-        'Еда',
-        'Транспорт',
-        'Развлечения',
-        'Одежда',
-        'Здоровье',
-        'Образование',
-        'Путешествия',
-        'Дом и быт',
-        'Техника',
-        'Другое'
-      ],
-      value: category.isEmpty ? null : category,
-      onChanged: (String? newValue) {
-        setState(() {
-          category = newValue ?? "";
-        });
-      },
-    ),
-  ],
-                       // ну сделай типа лист
+                          CompactCategoryDropdown(
+                            categories: const [
+                              'Еда',
+                              'Транспорт',
+                              'Развлечения',
+                              'Одежда',
+                              'Здоровье',
+                              'Образование',
+                              'Путешествия',
+                              'Дом и быт',
+                              'Техника',
+                              'Другое'
+                            ],
+                            value: category.isEmpty ? null : category,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                category = newValue ?? "";
+                              });
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 15),
                       label("Время"),
                       const SizedBox(height: 10),
                       InkWell(
-                        onTap: () => selectTime(context),
+                        onTap: _isLoading ? null : () => selectTime(context),
                         child: Container(
                           height: 50,
                           width: MediaQuery.of(context).size.width,
@@ -176,10 +161,15 @@ class _AddToDoPageState extends State<AddToDoPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(
-                        height: 30,
-                      ),
-                      colorButton(),
+                      const SizedBox(height: 30),
+                      _buildCreateButton(),
+                      if (_isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 20),
+                          child: Center(
+                            child: CircularProgressIndicator(color: Colors.white),
+                          ),
+                        ),
                     ],
                   ),
                 )
@@ -206,60 +196,119 @@ class _AddToDoPageState extends State<AddToDoPage> {
     );
 
     if (pickedTime != null) {
-      // Например, сохраним выбранное время в состоянии
       setState(() {
         selectedTime = pickedTime;
       });
     }
   }
 
-  Widget colorButton() {
+  Widget _buildCreateButton() {
     return InkWell(
-      onTap: () {
-        final now = DateTime.now();
-
-        final time = selectedTime ?? TimeOfDay.now();
-
-        final dateTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          time.hour,
-          time.minute,
-        );
-
-// Преобразуем МСК-время в UTC
-        final utcDateTime = dateTime.subtract(const Duration(hours: 3));
-
-        FirebaseFirestore.instance.collection("AddQuest").add({
-          "title": _titleController.text,
-          "category": category,
-          "description": _desctiptionController.text,
-          "taskType": type,
-          "time": Timestamp.fromDate(utcDateTime),
-        });
-
-        Navigator.pop(context);
-      },
+      onTap: _isLoading ? null : _addTransaction,
       child: Container(
-          height: 50,
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(colors: [
-                Color.fromARGB(255, 108, 142, 253),
-                Color(0xffff9068),
-                Color.fromARGB(255, 108, 176, 253)
-              ])),
-          child: const Center(
-            child: Text(
-              "Создать",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
-          )),
+        height: 50,
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(colors: [
+            Color.fromARGB(255, 108, 142, 253),
+            Color(0xffff9068),
+            Color.fromARGB(255, 108, 176, 253)
+          ]),
+        ),
+        child: Center(
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  "Создать",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addTransaction() async {
+    // Валидация полей
+    if (_titleController.text.isEmpty) {
+      _showSnackBar("Введите сумму");
+      return;
+    }
+
+    if (type.isEmpty) {
+      _showSnackBar("Выберите тип");
+      return;
+    }
+
+    if (category.isEmpty) {
+      _showSnackBar("Выберите категорию");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final now = DateTime.now();
+      final time = selectedTime ?? TimeOfDay.now();
+      final dateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        time.hour,
+        time.minute,
+      );
+      final utcDateTime = dateTime.subtract(const Duration(hours: 3));
+
+      // Используем FirestoreService для добавления транзакции
+      await _firestoreService.addTransaction(
+        title: _titleController.text,
+        category: category,
+        description: _descriptionController.text,
+        type: type,
+        time: utcDateTime,
+      );
+
+      // Очистка полей после успешного добавления
+      _titleController.clear();
+      _descriptionController.clear();
+      
+      // Навигация обратно
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar("Ошибка при создании: ${e.toString()}");
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -272,50 +321,15 @@ class _AddToDoPageState extends State<AddToDoPage> {
   }
 
   Widget typeSelect(String label, int color) {
-    return InkWell(
-      onTap: () {
+    return TypeSelectWidget(
+      label: label,
+      color: color,
+      selectedType: type,
+      onTypeSelected: (selectedLabel) {
         setState(() {
-          type = label;
+          type = selectedLabel;
         });
       },
-      child: Chip(
-        backgroundColor: type == label ? Colors.white54 : Color(color),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        label: Text(
-          label,
-          style: TextStyle(
-              color: type == label ? Colors.black : Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
-        ),
-        labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-      ),
-    );
-  }
-
-  Widget categorySelect(String label, int color) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          category = label;
-        });
-      },
-      child: Chip(
-        backgroundColor: category == label ? Colors.white : Color(color),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        label: Text(
-          label,
-          style: TextStyle(
-              color: category == label ? Colors.black : Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
-        ),
-        labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-      ),
     );
   }
 
@@ -330,13 +344,19 @@ class _AddToDoPageState extends State<AddToDoPage> {
       ),
       child: TextFormField(
         controller: controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+        ],
         maxLines: maxlines,
         style: const TextStyle(color: Colors.grey, fontSize: 17),
         decoration: InputDecoration(
-            border: InputBorder.none,
-            hintText: hintText,
-            hintStyle: const TextStyle(color: Colors.grey, fontSize: 17),
-            contentPadding: const EdgeInsets.only(left: 20, right: 20, top: 5)),
+          border: InputBorder.none,
+          hintText: hintText,
+          hintStyle: const TextStyle(color: Colors.grey, fontSize: 17),
+          contentPadding: const EdgeInsets.only(left: 20, right: 20, top: 5),
+        ),
+        enabled: !_isLoading,
       ),
     );
   }
@@ -345,10 +365,11 @@ class _AddToDoPageState extends State<AddToDoPage> {
     return Text(
       title,
       style: const TextStyle(
-          fontSize: 33,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2),
+        fontSize: 33,
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 2,
+      ),
     );
   }
 }

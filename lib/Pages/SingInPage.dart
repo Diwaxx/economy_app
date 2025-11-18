@@ -1,10 +1,12 @@
 // ignore: file_names
 import 'package:economy_app/Pages/HomePage.dart';
+import 'package:economy_app/pages/PhoneAuth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:economy_app/Services/Auth_Service.dart';
 import 'package:economy_app/pages/SingUpPage.dart';
+import 'package:economy_app/pages/PhoneAuth.dart';
 
 class SingInPage extends StatefulWidget {
   const SingInPage({super.key});
@@ -14,10 +16,12 @@ class SingInPage extends StatefulWidget {
 }
 
 class _SingInPageState extends State<SingInPage> {
-  firebase_auth.FirebaseAuth firebaseAuth = firebase_auth.FirebaseAuth.instance;
+  final firebase_auth.FirebaseAuth _firebaseAuth = firebase_auth.FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  AuthClass authClass = AuthClass();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,115 +38,173 @@ class _SingInPageState extends State<SingInPage> {
                     fontSize: 35,
                     color: Colors.white,
                     fontWeight: FontWeight.bold)),
-            const SizedBox(
-              height: 20,
-            ),
+            const SizedBox(height: 20),
             buttonItem("assets/google.svg", "Войти через гугл", 25, () async {
-              await authClass.googleSignIn(context);
+              await _signInWithGoogle();
             }),
-            const SizedBox(
-              height: 15,
-            ),
-            buttonItem("assets/phone.svg", "Войти через телефон", 25, () {}),
-            const SizedBox(
-              height: 15,
-            ),
+            const SizedBox(height: 15),
+            buttonItem("assets/phone.svg", "Войти через телефон", 25, () {
+              _navigateToPhoneAuth();
+            }),
+            const SizedBox(height: 15),
             textItem("Почта ", _emailController, false),
-            const SizedBox(
-              height: 15,
-            ),
+            const SizedBox(height: 15),
             textItem("Пароль ", _passwordController, true),
-            const SizedBox(
-              height: 30,
-            ),
-            colorButton(context),
-            const SizedBox(
-              height: 20,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Еще нет аккаунта? ",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                    )),
-                InkWell(
-                  onTap: () {
-                    Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                            builder: (builder) => SignUpPage()),
-                        (route) => false);
-                  },
-                  child: const Text("Зарегестрироваться",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ],
-            )
+            const SizedBox(height: 30),
+            _buildSignInButton(context),
+            const SizedBox(height: 20),
+            _buildSignUpLink(),
+            if (_isLoading) 
+              const Padding(
+                padding: EdgeInsets.only(top: 20),
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
           ],
         ),
       )),
     );
   }
 
-  Widget colorButton(BuildContext context) {
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await _authService.signInWithGoogle(context);
+      if (user != null) {
+        // Навигация происходит внутри AuthService
+      }
+    } catch (e) {
+      // Ошибка обрабатывается в AuthService
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithEmail() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _authService.showErrorSnackBar(context, "Заполните все поля");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await _authService.signInWithEmail(
+        context: context,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      if (user != null) {
+        // Навигация происходит внутри AuthService
+      }
+    } catch (e) {
+      // Ошибка обрабатывается в AuthService
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _navigateToPhoneAuth() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (builder) => PhoneAuthPage()),
+    );
+  }
+
+  Widget _buildSignInButton(BuildContext context) {
     return InkWell(
-      onTap: () async {
-        try {
-          firebase_auth.UserCredential userCredential =
-              await firebaseAuth.signInWithEmailAndPassword(
-                  email: _emailController.text,
-                  password: _passwordController.text);
-          if (context.mounted) {
-            Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (builder) => HomePage()),
-                (route) => false);
-          }
-        } catch (e) {
-          final snackbar = SnackBar(content: Text(e.toString()));
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(snackbar);
-          }
-        }
-      },
+      onTap: _isLoading ? null : _signInWithEmail,
       child: Container(
-          height: 60,
-          width: MediaQuery.of(context).size.width - 90,
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(colors: [
-                Color.fromARGB(255, 108, 142, 253),
-                Color(0xffff9068),
-                Color.fromARGB(255, 108, 176, 253)
-              ])),
-          child: const Center(
-            child: Text(
-              "Войти",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
+        height: 60,
+        width: MediaQuery.of(context).size.width - 90,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(colors: [
+            Color.fromARGB(255, 108, 142, 253),
+            Color(0xffff9068),
+            Color.fromARGB(255, 108, 176, 253)
+          ]),
+        ),
+        child: Center(
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  "Войти",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignUpLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          "Еще нет аккаунта? ",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+          ),
+        ),
+        InkWell(
+          onTap: _isLoading ? null : () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (builder) => SignUpPage()),
+              (route) => false,
+            );
+          },
+          child: const Text(
+            "Зарегистрироваться",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
             ),
-          )),
+          ),
+        ),
+      ],
     );
   }
 
   Widget buttonItem(String image, String btnname, double size, Function ontap) {
     return InkWell(
-      onTap: () => ontap(),
+      onTap: _isLoading ? null : () => ontap(),
       child: SizedBox(
         height: 60,
         width: MediaQuery.of(context).size.width - 90,
         child: Card(
           color: Colors.black,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(width: 1, color: Colors.grey)),
+            borderRadius: BorderRadius.circular(15),
+            side: const BorderSide(width: 1, color: Colors.grey),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -151,14 +213,15 @@ class _SingInPageState extends State<SingInPage> {
                 height: size,
                 width: size,
               ),
-              const SizedBox(
-                width: 15,
+              const SizedBox(width: 15),
+              Text(
+                btnname,
+                style: const TextStyle(
+                  fontSize: 17,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              Text(btnname,
-                  style: const TextStyle(
-                      fontSize: 17,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -171,17 +234,30 @@ class _SingInPageState extends State<SingInPage> {
       height: 55,
       width: MediaQuery.of(context).size.width - 90,
       child: TextFormField(
-        style: const TextStyle(
-          color: Colors.white,
-        ),
+        style: const TextStyle(color: Colors.white),
         obscureText: hide,
         controller: controller,
+        enabled: !_isLoading,
         decoration: InputDecoration(
-            labelText: text,
-            labelStyle: const TextStyle(
-                fontSize: 17,
-                color: Colors.white,
-                fontWeight: FontWeight.bold)),
+          labelText: text,
+          labelStyle: const TextStyle(
+            fontSize: 17,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: Colors.grey),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: Colors.grey),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: Colors.blue),
+          ),
+        ),
       ),
     );
   }

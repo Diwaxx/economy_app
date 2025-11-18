@@ -166,6 +166,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
+  flutter_localizations:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   flutter_otp_text_field:
     dependency: "direct main"
     description:
@@ -376,6 +381,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.16.0"
+  month_year_picker:
+    dependency: "direct main"
+    description:
+      name: month_year_picker
+      sha256: "0990a698061ce4f421ba4f2163895dae5ea88a2f2ff09294f0d77d7c9e6c0491"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.0+1"
   path:
     dependency: transitive
     description:
@@ -501,6 +514,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  syncfusion_flutter_charts:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_charts
+      sha256: b303d874106a8d21484428d1bed6372deba0b8a10ef1072ca5fa854409c1d06a
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.10"
+  syncfusion_flutter_core:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_core
+      sha256: "8118f13264d1401a7085d12a0aaeac1ebd5cd939046b8c565d195879646daad6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.10"
   term_glyph:
     dependency: transitive
     description:
@@ -599,4 +628,4 @@ packages:
     version: "6.6.1"
 sdks:
   dart: ">=3.9.0 <4.0.0"
-  flutter: ">=3.35.0"
+  flutter: ">=3.35.1"
