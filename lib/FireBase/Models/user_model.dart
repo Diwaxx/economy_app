@@ -43,4 +43,25 @@ class UserModel {
       preferences: data['preferences'] ?? {},
     );
   }
+
+  // Добавьте этот метод copyWith
+  UserModel copyWith({
+    String? uid,
+    String? email,
+    String? displayName,
+    String? photoURL,
+    DateTime? createdAt,
+    DateTime? lastLogin,
+    Map<String, dynamic>? preferences,
+  }) {
+    return UserModel(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      photoURL: photoURL ?? this.photoURL,
+      createdAt: createdAt ?? this.createdAt,
+      lastLogin: lastLogin ?? this.lastLogin,
+      preferences: preferences ?? this.preferences,
+    );
+  }
 }

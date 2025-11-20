@@ -13,9 +13,7 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -28,55 +26,53 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   // **GOOGLE SIGN IN**
-  Future<UserModel?> signInWithGoogle(BuildContext context) async {
-    try {
-      showLoadingSnackBar(context, "Вход через Google...");
+  // В методе signInWithGoogle добавьте после успешного входа:
+Future<UserModel?> signInWithGoogle(BuildContext context) async {
+  try {
+    showLoadingSnackBar(context, "Вход через Google...");
 
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        showErrorSnackBar(context, "Вход отменен");
-        return null;
-      }
-
-      final GoogleSignInAuthentication googleAuth = 
-          await googleUser.authentication;
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-        accessToken: googleAuth.accessToken,
-      );
-
-      final UserCredential userCredential = 
-          await _auth.signInWithCredential(credential);
-
-      if (userCredential.user != null) {
-        // Создаем или обновляем профиль пользователя
-        final UserModel userModel = await _createOrUpdateUserProfile(
-          userCredential.user!,
-        );
-
-        await _storeAuthData(userCredential);
-        
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (builder) => HomePage()),
-          (route) => false,
-        );
-
-        showSuccessSnackBar(context, "Добро пожаловать!");
-        return userModel;
-      }
-
-      return null;
-    } on FirebaseAuthException catch (e) {
-      _handleAuthError(context, e);
-      return null;
-    } catch (e) {
-      showErrorSnackBar(context, "Ошибка входа: ${e.toString()}");
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      showErrorSnackBar(context, "Вход отменен");
       return null;
     }
-  }
 
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final AuthCredential credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+      accessToken: googleAuth.accessToken,
+    );
+
+    final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+    if (userCredential.user != null) {
+      // ОБЕСПЕЧИВАЕМ СОЗДАНИЕ ПРОФИЛЯ
+      await _ensureUserProfileExists(userCredential.user!);
+      
+      final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+      final userModel = UserModel.fromFirestore(userDoc);
+      
+      await _storeAuthData(userCredential);
+      
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (builder) => HomePage()),
+        (route) => false,
+      );
+
+      showSuccessSnackBar(context, "Добро пожаловать!");
+      return userModel;
+    }
+
+    return null;
+  } on FirebaseAuthException catch (e) {
+    _handleAuthError(context, e);
+    return null;
+  } catch (e) {
+    showErrorSnackBar(context, "Ошибка входа: ${e.toString()}");
+    return null;
+  }
+}
   // **EMAIL/PASSWORD SIGN UP**
   Future<UserModel?> signUpWithEmail({
     required BuildContext context,
@@ -87,11 +83,11 @@ class AuthService {
     try {
       showLoadingSnackBar(context, "Создание аккаунта...");
 
-      final UserCredential userCredential = 
-          await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+      final UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
 
       if (userCredential.user != null) {
         // Обновляем displayName
@@ -115,39 +111,37 @@ class AuthService {
   }
 
   // **EMAIL/PASSWORD SIGN IN**
-  Future<UserModel?> signInWithEmail({
-    required BuildContext context,
-    required String email,
-    required String password,
-  }) async {
-    try {
-      showLoadingSnackBar(context, "Вход...");
+  // В методе signInWithEmail также добавьте:
+Future<UserModel?> signInWithEmail({
+  required BuildContext context,
+  required String email,
+  required String password,
+}) async {
+  try {
+    showLoadingSnackBar(context, "Вход...");
 
-      final UserCredential userCredential = 
-          await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+    final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
 
-      if (userCredential.user != null) {
-        // Обновляем время последнего входа
-        await _updateLastLogin(userCredential.user!);
-        
-        await _storeAuthData(userCredential);
-        showSuccessSnackBar(context, "Добро пожаловать!");
-        
-        return UserModel.fromFirestore(
-          await _firestore.collection('users').doc(userCredential.user!.uid).get()
-        );
-      }
-
-      return null;
-    } on FirebaseAuthException catch (e) {
-      _handleAuthError(context, e);
-      return null;
+    if (userCredential.user != null) {
+      // ОБЕСПЕЧИВАЕМ СОЗДАНИЕ ПРОФИЛЯ
+      await _ensureUserProfileExists(userCredential.user!);
+      
+      await _storeAuthData(userCredential);
+      showSuccessSnackBar(context, "Добро пожаловать!");
+      
+      final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+      return UserModel.fromFirestore(userDoc);
     }
-  }
 
+    return null;
+  } on FirebaseAuthException catch (e) {
+    _handleAuthError(context, e);
+    return null;
+  }
+}
   // **PHONE AUTHENTICATION**
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
@@ -176,7 +170,8 @@ class AuthService {
     }
   }
 
-  Future<UserModel?> signInWithPhoneNumber(String verificationIdFinal, {
+  Future<UserModel?> signInWithPhoneNumber(
+    String verificationIdFinal, {
     required String verificationId,
     required String smsCode,
     required BuildContext context,
@@ -189,8 +184,9 @@ class AuthService {
         smsCode: smsCode,
       );
 
-      final UserCredential userCredential = 
-          await _auth.signInWithCredential(credential);
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
 
       if (userCredential.user != null) {
         final UserModel userModel = await _createOrUpdateUserProfile(
@@ -198,7 +194,7 @@ class AuthService {
         );
 
         await _storeAuthData(userCredential);
-        
+
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (builder) => HomePage()),
@@ -229,12 +225,12 @@ class AuthService {
       email: user.email!,
       displayName: displayName ?? user.displayName,
       photoURL: user.photoURL,
-      createdAt: userDoc.exists 
+      createdAt: userDoc.exists
           ? (userDoc.data()!['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       lastLogin: DateTime.now(),
-      preferences: userDoc.exists 
-          ? userDoc.data()!['preferences'] 
+      preferences: userDoc.exists
+          ? userDoc.data()!['preferences']
           : {
               'currency': AppConstants.defaultCurrency,
               'theme': 'light',
@@ -272,7 +268,7 @@ class AuthService {
       await _googleSignIn.signOut();
       await _auth.signOut();
       await _storage.deleteAll();
-      
+
       showSuccessSnackBar(context, "Вы вышли из аккаунта");
     } catch (e) {
       showErrorSnackBar(context, "Ошибка при выходе: ${e.toString()}");
@@ -301,7 +297,7 @@ class AuthService {
   // **ERROR HANDLING**
   void _handleAuthError(BuildContext context, FirebaseAuthException e) {
     String errorMessage;
-    
+
     switch (e.code) {
       case 'user-not-found':
         errorMessage = "Пользователь не найден";
@@ -324,7 +320,7 @@ class AuthService {
       default:
         errorMessage = "Ошибка: ${e.message}";
     }
-    
+
     showErrorSnackBar(context, errorMessage);
   }
 
@@ -347,28 +343,19 @@ class AuthService {
 
   void showSuccessSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
 
   void showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   void showInfoSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.orange,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.orange),
     );
   }
 
@@ -377,5 +364,98 @@ class AuthService {
     final doc = await _firestore.collection('users').doc(uid).get();
     return doc.exists;
   }
-  
+
+  Future<void> _ensureUserProfileExists(User user) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+      if (!userDoc.exists) {
+        // Создаем профиль пользователя если его нет
+        final userModel = UserModel(
+          uid: user.uid,
+          email: user.email!,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          createdAt: DateTime.now(),
+          lastLogin: DateTime.now(),
+          preferences: {
+            'currency': 'RUB',
+            'theme': 'light',
+            'notifications': true,
+            'language': 'ru',
+          },
+        );
+
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .set(userModel.toMap());
+
+        // Инициализируем категории по умолчанию
+        await _initializeDefaultCategories(user.uid);
+      } else {
+        // Обновляем время последнего входа
+        await _firestore.collection('users').doc(user.uid).update({
+          'lastLogin': Timestamp.fromDate(DateTime.now()),
+        });
+      }
+    } catch (e) {
+      print('Error ensuring user profile: $e');
+    }
+  }
+
+  Future<void> _initializeDefaultCategories(String userId) async {
+    try {
+      final categoriesRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('categories');
+
+      // Категории доходов
+      final incomeCategories = [
+        {
+          'name': 'Зарплата',
+          'type': 'income',
+          'color': '#4CAF50',
+          'icon': '💼',
+        },
+        {'name': 'Фриланс', 'type': 'income', 'color': '#2196F3', 'icon': '💻'},
+        {
+          'name': 'Инвестиции',
+          'type': 'income',
+          'color': '#FF9800',
+          'icon': '📈',
+        },
+      ];
+
+      // Категории расходов
+      final expenseCategories = [
+        {'name': 'Еда', 'type': 'expense', 'color': '#F44336', 'icon': '🍕'},
+        {
+          'name': 'Транспорт',
+          'type': 'expense',
+          'color': '#3F51B5',
+          'icon': '🚗',
+        },
+        {
+          'name': 'Развлечения',
+          'type': 'expense',
+          'color': '#E91E63',
+          'icon': '🎬',
+        },
+      ];
+
+      // Добавляем категории
+      for (final category in [...incomeCategories, ...expenseCategories]) {
+        await categoriesRef.add({
+          ...category,
+          'userId': userId,
+          'isDefault': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print('Error initializing categories: $e');
+    }
+  }
 }

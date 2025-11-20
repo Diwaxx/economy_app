@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:economy_app/Services/Auth_Service.dart';
 import 'package:economy_app/pages/SingUpPage.dart';
-import 'package:economy_app/pages/PhoneAuth.dart';
 
 class SingInPage extends StatefulWidget {
   const SingInPage({super.key});
@@ -21,6 +20,76 @@ class _SingInPageState extends State<SingInPage> {
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await _authService.signInWithGoogle(context);
+      if (user != null) {
+        // ДОБАВЬТЕ НАВИГАЦИЮ ЗДЕСЬ
+        _navigateToHome();
+      }
+    } catch (e) {
+      // Ошибка обрабатывается в AuthService
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithEmail() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _authService.showErrorSnackBar(context, "Заполните все поля");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await _authService.signInWithEmail(
+        context: context,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      if (user != null) {
+        // ДОБАВЬТЕ НАВИГАЦИЮ ЗДЕСЬ
+        _navigateToHome();
+      }
+    } catch (e) {
+      // Ошибка обрабатывается в AuthService
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // ДОБАВЬТЕ ЭТОТ МЕТОД ДЛЯ НАВИГАЦИИ
+  void _navigateToHome() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (builder) => HomePage()),
+      (route) => false,
+    );
+  }
+
+  void _navigateToPhoneAuth() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (builder) => PhoneAuthPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,65 +131,6 @@ class _SingInPageState extends State<SingInPage> {
           ],
         ),
       )),
-    );
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final user = await _authService.signInWithGoogle(context);
-      if (user != null) {
-        // Навигация происходит внутри AuthService
-      }
-    } catch (e) {
-      // Ошибка обрабатывается в AuthService
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _signInWithEmail() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _authService.showErrorSnackBar(context, "Заполните все поля");
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final user = await _authService.signInWithEmail(
-        context: context,
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-
-      if (user != null) {
-        // Навигация происходит внутри AuthService
-      }
-    } catch (e) {
-      // Ошибка обрабатывается в AuthService
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _navigateToPhoneAuth() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (builder) => PhoneAuthPage()),
     );
   }
 
